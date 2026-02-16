@@ -146,15 +146,15 @@ num_per_class = int(total / length(classes))
 % onwards. comment the following block of lines only if the naive forecasting procedure is being
 % used.
 
-load_augmented_0 = load('beats_rnn.mat');
-df_augmented_0 = load_augmented_0.dataframe;
-[classi, ~, idx] = unique(df_augmented_0.Class);
+load_augmented = load('beats_rnn.mat');
+df_augmented = load_augmented.dataframe;
+[classi, ~, idx] = unique(df_augmented.Class);
                        
 conteggio = accumarray(idx, 1);
 num_per_class = conteggio(1);
-I = [I; df_augmented_0.Lead_I];
-annotations = [annotations; df_augmented_0.Class];
-augmented = [augmented; df_augmented_0.Augmented];
+I = [I; df_augmented.Lead_I];
+annotations = [annotations; df_augmented.Class];
+augmented = [augmented; df_augmented.Augmented];
 
 
 % now it is important to balance each class, and take the same amount of beats for each
