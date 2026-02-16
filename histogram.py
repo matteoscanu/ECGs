@@ -16,4 +16,5 @@ ax = df.plot.bar(rot=0, figsize=(12, 5))
 ax.legend(bbox_to_anchor=(-0.1, 0.5))
 plt.tight_layout() # fit labels etc. nicely into the plot
 plt.grid(alpha=0.5)
+
 plt.savefig('histogram.jpg', format='jpg')
