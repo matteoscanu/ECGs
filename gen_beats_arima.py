@@ -59,18 +59,18 @@ df.index = np.arange(len(df))
 
 print('Original class split: \n', df.value_counts("Class"))
 
-def creation(data_, classe_, forecaster):
+def creation(data_, class_, forecaster):
 
-    # separo i picchi dal resto
+    # sepate peaks from the rest of the beat
 
     pre_ = 100
     post_ = 100
     signal_length_ = pre_ + post_
     window_ = 30
 
-    scelti = data_["Lead_I"].explode(ignore_index=True)
-    mask_rest = np.ones_like(scelti, dtype=bool)
-    mask_peaks = np.zeros_like(scelti, dtype=bool)
+    chosen = data_["Lead_I"].explode(ignore_index=True)
+    mask_rest = np.ones_like(chosen, dtype=bool)
+    mask_peaks = np.zeros_like(chosen, dtype=bool)
     for ii in range(n):
         idx = signal_length_ * ii + pre_
         start = int(idx - window_ / 2)
@@ -78,8 +78,8 @@ def creation(data_, classe_, forecaster):
         mask_rest[start:end] = False
         mask_peaks[start:end] = True
 
-    y_rest = pd.Series(scelti[mask_rest].values, dtype='float64')
-    y_peaks = pd.Series(scelti[mask_peaks].values, dtype='float64')
+    y_rest = pd.Series(chosen[mask_rest].values, dtype='float64')
+    y_peaks = pd.Series(chosen[mask_peaks].values, dtype='float64')
 
     train_peaks, test_peaks = temporal_train_test_split(y_peaks, test_size=window_)
     train_rest, test_rest = temporal_train_test_split(y_rest, test_size=(signal_length_ - window_))
@@ -101,17 +101,17 @@ def creation(data_, classe_, forecaster):
 
     pre_window = int(window / 2)
 
-    salto_1 = rest_noised[pre_ - pre_window - 1] - y_pred.reset_index(drop=True)[0]
+    jump_1 = rest_noised[pre_ - pre_window - 1] - y_pred.reset_index(drop=True)[0]
 
     # noised artificial beats
 
-    segnale_nuovo = np.concatenate((rest_noised[: pre_ - pre_window].values,
-                                    y_pred.values + salto_1))
+    new_signal = np.concatenate((rest_noised[: pre_ - pre_window].values,
+                                    y_pred.values + jump_1))
     
-    salto_2 = rest_noised[pre_ - pre_window] - segnale_nuovo[- 1]
+    jump_2 = rest_noised[pre_ - pre_window] - new_signal[- 1]
 
-    segnale_nuovo = np.concatenate((segnale_nuovo,
-                                    rest_noised[pre_ - pre_window :].values - salto_2))
+    new_signal = np.concatenate((new_signal,
+                                    rest_noised[pre_ - pre_window :].values - jump_2))
 
     # recompose one beat
 
@@ -120,7 +120,7 @@ def creation(data_, classe_, forecaster):
                       test_rest[pre_ - int(window / 2):]],
                       ignore_index=True)
 
-    return [segnale_nuovo, real.values]
+    return [new_signal, real.values]
 
 
 # creation
@@ -141,21 +141,21 @@ for i, classe in enumerate(classi):
 	df_class = df[df["Class"] == classe]
 	for numero in range(sampling_arima):
 		np.random.seed(None)
-		estrazione = df_class.sample(n=n)
+		extracted = df_class.sample(n=n)
 		start_time = time.perf_counter()
-		[segnale_nuovo, real] = creation(data_=estrazione, classe_=classe, forecaster=arima)
+		[new_signal, real] = creation(data_=extracted, class_=classe, forecaster=arima)
 		end_time = time.perf_counter()
 		
 		elapsed_time = end_time - start_time
 		time_passed_arima = time_passed_arima + elapsed_time
-		aug_arima.append([segnale_nuovo, classe, '1'])
+		aug_arima.append([new_signal, classe, '1'])
 		
 		# metrics for the peak only
 
-		arima_dtw = arima_dtw + dtw(segnale_nuovo, real, be="numpy")
-		arima_was = arima_was + wasserstein_distance(segnale_nuovo, real)
-		arima_cos = arima_cos + cosine_similarity([segnale_nuovo], [real])[0][0]
-		arima_fre = arima_fre + frdist([segnale_nuovo], [real])
+		arima_dtw = arima_dtw + dtw(new_signal, real, be="numpy")
+		arima_was = arima_was + wasserstein_distance(new_signal, real)
+		arima_cos = arima_cos + cosine_similarity([new_signal], [real])[0][0]
+		arima_fre = arima_fre + frdist([new_signal], [real])
 
 		if numero % 100 == 0:
 			
