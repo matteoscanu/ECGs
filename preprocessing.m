@@ -1,8 +1,3 @@
-clear 
-close all
-clc
-%%% load('definitivo.mat')
-
 % to download the whole dataset uncomment the following block.
 % you can also download it directly in:
 % aggiungi link per scaricare mit-bih dataset
@@ -23,12 +18,14 @@ savepath
 wfdbdemo
 %}
 
-% analyze one single file
+
+% analyze one single file:
 
 lista = ["100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "111", "112", ...
          "113", "114", "115", "116", "117", "118", "119", "121", "122", "123", "124", "200", ...
          "201", "202", "203", "205", "207", "208", "209", "210", "212", "213", "214", "215", ...
          "217", "219", "220", "221", "222", "223", "228", "230", "231", "232", "233", "234"];
+% if you need all the beats, included the ones with a pacemaker, just comment the following two lines.
 paced = ["102", "104", "107", "217"];
 lista = setdiff(lista, paced);
 seed = rng;
@@ -51,7 +48,6 @@ prova_1 = record(k - pre : k + post, 1);
 prova_2 = record(k - pre : k + post, 2);
 fprintf("Signal length: %d datapoints, or %.2f seconds.\n\n", ...
         sample_points, sample_points / Fs)
-
 f1 = figure('Visible', 'off');
 p1 = plot(prova_1);
 hold on
@@ -69,8 +65,8 @@ fprintf('Plot in figure 1: beat number %d of file %s, type %c.\n\n', ...
 
 % now let's save everything we need
         
-% i suggest to uncomment this portion of the code just the first time you run
-% it, and then comment it again, since it is much faster to load the saved 
+% i suggest to uncomment this portion of the code the first time you run it,
+% then comment it again, since it is much faster to load the saved 
 % dataset: those beats do not change and it takes more than five minutes to 
 % repeat the operation each time.
 %{
@@ -87,9 +83,9 @@ symbol_mapping = containers.Map({'N', 'L', 'R', 'e', 'j', ...
                                  'F', ...
                                  'Q', 'Q', 'Q'});
 
-totale = 360000;
-I = zeros(totale, sample_points);
-annotations = blanks(totale)';
+total = 360000;
+I = zeros(total, sample_points);
+annotations = blanks(total)';
 k = 1;
 ttime = tic;
 for i = 1 : length(lista)
@@ -111,22 +107,12 @@ I = I(1 : k - 1, :);
 annotations = annotations(1 : k - 1);
 num = length(annotations);
 tend = toc(ttime);
-fprintf('Numero di battiti per ciascuna classe (pre-augmentation):\n')
+fprintf('Number of beats for each class (pre-augmentation):\n')
 conteggioClassi(annotations)
-fprintf('Numero totale di battiti: %d.\n\n', num)
-fprintf('Tempo impiegato per importare il dataset normalmente: %.3f secondi.\n\n', tend)
+fprintf('Total number of beats: %d.\n\n', num)
+fprintf('Time spent to import the dataset: %.3f seconds.\n\n', tend)
 %}
 
-% in order to save you some time, the following lines allow you to save and load the dataset
-% and the label of each beat: they are already centered in its r-peak.
-save('dataset.mat', 'I')
-save('classes.mat', 'annotations')
-%{
-loading_dataset = load('dataset.mat');
-I = loading_dataset.I;
-loading_classi = load('classes.mat');
-annotations = loading_classes.annotations;
-%}
 
 % drop all q-type beats
 
@@ -137,9 +123,67 @@ I = I(x_q, :);
 num = length(I);
 annotations = annotations(x_q);
 augmented = zeros(num, 1);
-fprintf('Numero di battiti per ciascuna classe (pre-augmentation):\n')
+fprintf('Number of beats for each class (pre-augmentation):\n')
 conteggioClassi(annotations)
-fprintf('Numero totale di battiti: %d.\n\n', num)
+fprintf('Total number of beats: %d.\n\n', num)
 classes = unique(annotations);
-%%%clear ann anntype fff k lista loading_classi loading_dataset paced prova_2
-%%%clear center q_index record sss tipo x_q
+
+
+% execute the following block of lines only if you want to use the naive augmentation process,
+% otherwise use whatever type of data augmentation you need to and then go ahead.
+%{
+num_per_class = int(total / length(classes))
+[I_V, annotations_V, augmented_V] = augmentation(I, annotations, 'V', ...
+                                                 num_per_class, sample_points)
+[I_S, annotations_S, augmented_S] = augmentation(I, annotations, 'S', ...
+                                                 num_per_class, sample_points)
+[I_F, annotations_F, augmented_F] = augmentation(I, annotations, 'F', ...
+                                                 num_per_class, sample_points)
+%}
+
+
+% if you used any time-series forecasting method please load here what you obtained and then move
+% onwards. comment the following block of lines only if the naive forecasting procedure is being
+% used.
+
+load_augmented_0 = load('beats_rnn.mat');
+df_augmented_0 = load_augmented_0.dataframe;
+[classi, ~, idx] = unique(df_augmented_0.Class);
+                       
+conteggio = accumarray(idx, 1);
+num_per_class = conteggio(1);
+I = [I; df_augmented_0.Lead_I];
+annotations = [annotations; df_augmented_0.Class];
+augmented = [augmented; df_augmented_0.Augmented];
+
+
+% now it is important to balance each class, and take the same amount of beats for each
+% class. to do that, use function 'balance'. at the end function 'organize' casually
+% order the beats so that manually creating a k-fold results very easy.
+% please don't comment the following block of lines.
+
+[I_N, ann_N, aug_N] = balance(I, annotations, augmented, 'N', num_per_class);
+[I_V, ann_V, aug_V] = balance(I, annotations, augmented, 'V', num_per_class);
+[I_S, ann_S, aug_S] = balance(I, annotations, augmented, 'S', num_per_class);
+[I_F, ann_F, aug_F] = balance(I, annotations, augmented, 'F', num_per_class);
+[I_new, annotations_new, augmented_new] = organize([I_N; I_V; I_S; I_F], ...
+                                                   [ann_N; ann_V; ann_S; ann_F], ...
+                                                   [aug_N; aug_V; aug_S; aug_F], seed);
+
+
+% to save some time, the following lines allow to save and load the dataset
+% and the label of each beat: they are already centered in its r-peak.
+% at this moment i put it here so that you save the dataset already augmented, but if for some
+% reasons you need just the original one you can put this block before the 'remove q-index block'.
+save('dataset.mat', 'I')
+save('classes.mat', 'annotations')
+%{
+loading_dataset = load('dataset.mat');
+I = loading_dataset.I;
+loading_classi = load('classes.mat');
+annotations = loading_classes.annotations;
+%}
+
+fprintf('Number of beats for each class (post-augmentation):\n')
+conteggioClassi(annotations_new)
+fprintf('Total number of beats: %d.\n\n', num)
