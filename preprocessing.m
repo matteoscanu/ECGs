@@ -108,7 +108,7 @@ annotations = annotations(1 : k - 1);
 num = length(annotations);
 tend = toc(ttime);
 fprintf('Number of beats for each class (pre-augmentation):\n')
-conteggioClassi(annotations)
+classCounter(annotations)
 fprintf('Total number of beats: %d.\n\n', num)
 fprintf('Time spent to import the dataset: %.3f seconds.\n\n', tend)
 %}
@@ -123,8 +123,8 @@ I = I(x_q, :);
 num = length(I);
 annotations = annotations(x_q);
 augmented = zeros(num, 1);
-fprintf('Number of beats for each class (pre-augmentation):\n')
-conteggioClassi(annotations)
+fprintf('Number of beats for each class (after dropping q-labelled beats):\n')
+classCounter(annotations)
 fprintf('Total number of beats: %d.\n\n', num)
 classes = unique(annotations);
 
@@ -185,5 +185,5 @@ annotations = loading_classes.annotations;
 %}
 
 fprintf('Number of beats for each class (post-augmentation):\n')
-conteggioClassi(annotations_new)
+classCounter(annotations_new)
 fprintf('Total number of beats: %d.\n\n', num)
