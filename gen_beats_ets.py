@@ -60,16 +60,16 @@ df.index = np.arange(len(df))
 print('Original class split: \n', df.value_counts("Class"))
 
 
-def creation(data_, classe_, forecaster_, pre_peak, post_peak, pre_window, post_window):
+def creation(data_, class_, forecaster_, pre_peak, post_peak, pre_window, post_window):
 
-    # separo i picchi dal resto
+    # sepate peaks from the rest of the beat
 
     signal_length_ = pre_peak + post_peak
     window_ = pre_window + post_window
 
-    scelti = data_["Lead_I"].explode(ignore_index=True)
-    mask_rest = np.ones_like(scelti, dtype=bool)
-    mask_peaks = np.zeros_like(scelti, dtype=bool)
+    chosen = data_["Lead_I"].explode(ignore_index=True)
+    mask_rest = np.ones_like(chosen, dtype=bool)
+    mask_peaks = np.zeros_like(chosen, dtype=bool)
     for ii in range(n):
         idx = signal_length * ii + pre
         start = int(idx - pre_window)
@@ -77,8 +77,8 @@ def creation(data_, classe_, forecaster_, pre_peak, post_peak, pre_window, post_
         mask_rest[start:end] = False
         mask_peaks[start:end] = True
 
-    y_rest = pd.Series(scelti[mask_rest].values, dtype='float64')
-    y_peaks = pd.Series(scelti[mask_peaks].values, dtype='float64')
+    y_rest = pd.Series(chosen[mask_rest].values, dtype='float64')
+    y_peaks = pd.Series(chosen[mask_peaks].values, dtype='float64')
 
     train_peaks, test_peaks = temporal_train_test_split(y_peaks, test_size=window_)
     train_rest, test_rest = temporal_train_test_split(y_rest, test_size=(signal_length_ - window_))
@@ -98,32 +98,33 @@ def creation(data_, classe_, forecaster_, pre_peak, post_peak, pre_window, post_
 
     # what if there is a discontinuity?
 
-    salto_1 = rest_noised[pre_peak - pre_window - 1] - y_pred.reset_index(drop=True)[0]
+    jump_1 = rest_noised[pre_peak - pre_window - 1] - y_pred.reset_index(drop=True)[0]
 
     # noised artificial beats
 
-    segnale_nuovo = np.concatenate((rest_noised[: pre_peak - pre_window].values,
-                                    y_pred.values + salto_1))
+    new_signal = np.concatenate((rest_noised[: pre_peak - pre_window].values,
+                                    y_pred.values + jump_1))
     
-    salto_2 = rest_noised[pre_peak - pre_window] - segnale_nuovo[- 1]
+    jump_2 = rest_noised[pre_peak - pre_window] - new_signal[- 1]
 
-    segnale_nuovo = np.concatenate((segnale_nuovo,
-                                    rest_noised[pre_peak - pre_window :].values - salto_2))         
+    new_signal = np.concatenate((new_signal,
+                                    rest_noised[pre_peak - pre_window :].values - jump_2))         
                                     
 
-    # recompose one beat
+    # recompose the beat
 
     real = pd.concat([test_rest[: pre_peak - pre_window],
                       test_peaks,
                       test_rest[pre_peak - pre_window:]],
                       ignore_index=True)
 
-    # create an augmented beat like in the paper
+    # create an augmented beat like in the paper in order to measure them and 
+    # the ones augmented
 
     noise_2 = pd.Series(np.random.normal(0, np.sqrt(0.05), size=signal_length))
     fake = real.values + noise_2
 
-    return [segnale_nuovo, fake.values, real.values]
+    return [new_signal, fake.values, real.values]
 
 
 # creation
@@ -153,26 +154,26 @@ for classe in classi:
     else:
         n = 10
 
-    for numero in range(sampling_ets):
+    for number in range(sampling_ets):
         np.random.seed(None)
-        estrazione = df_class.sample(n=n)
+        extracted = df_class.sample(n=n)
         start_time = time.perf_counter()
-        [segnale_nuovo, fake, real] = creation(data_=estrazione, classe_=classe, 
+        [new_signal, fake, real] = creation(data_=extracted, class_=classe, 
                                                forecaster_=ets, 
                                                pre_peak=pre, post_peak=post, 
                                                pre_window=pre_window, 
                                                post_window=post_window)
         end_time = time.perf_counter()
 
-        if numero <= 2:
+        if number <= 2:
         
             plt.figure()
-            plot_series(pd.Series(segnale_nuovo), pd.Series(real))
+            plot_series(pd.Series(new_signal), pd.Series(real))
             plt.legend(["Generated", "Real"])
-            title = str(numero) + "_ets generated vs real beat of class " + classe + ".jpg"
+            title = str(number) + " ets generated vs real beat of class " + classe + ".jpg"
             plt.savefig(title, format="jpg")
             
-        if numero == 0:
+        if number == 0:
         
             plt.figure()
             plot_series(pd.Series(fake), pd.Series(real))
@@ -182,14 +183,14 @@ for classe in classi:
         
         elapsed_time = end_time - start_time
         time_passed_ets = time_passed_ets + elapsed_time
-        aug_ets.append([segnale_nuovo, classe, '1'])
-        ets_dtw = ets_dtw + dtw(segnale_nuovo, real, be="numpy")
+        aug_ets.append([new_signal, classe, '1'])
+        ets_dtw = ets_dtw + dtw(new_signal, real, be="numpy")
         fake_dtw = fake_dtw + dtw(fake, real, be="numpy")
-        ets_was = ets_was + wasserstein_distance(segnale_nuovo, real)
+        ets_was = ets_was + wasserstein_distance(new_signal, real)
         fake_was = fake_was + wasserstein_distance(fake, real)
-        ets_cos = ets_cos + cosine_similarity([segnale_nuovo], [real])[0][0]
+        ets_cos = ets_cos + cosine_similarity([new_signal], [real])[0][0]
         fake_cos = fake_cos + cosine_similarity([fake], [real])[0][0]
-        ets_fre = ets_fre + frdist([segnale_nuovo], [real])
+        ets_fre = ets_fre + frdist([new_signal], [real])
         fake_fre = fake_fre + frdist([fake], [real])
 
 den = len(classi) * sampling_ets
