@@ -179,7 +179,8 @@ Q = [8 1]        % Quality factors
 ```matlab
 % k-fold cross-validation (k=10)
 % KNN with k=4 neighbors
-% Each vote is computed with euclidean distance and an inverse distance weight (the more the distance, the less the value of the vote).
+% Each vote is computed with euclidean distance and an inverse distance weight
+% (higher the distance, the less the value of the vote).
 ```
 
 **3-class classification (V, S, F):**
@@ -190,10 +191,10 @@ Q = [8 1]        % Quality factors
 
 ##### 8. Visualizations
 The script automatically generates:
-- Individual beat plots
-- WST filterbank
-- Scaling function and wavelets
-- Coefficient scalograms (0th, 1st, 2nd order)
+- Individual beat plots;
+- WST filterbank;
+- Scaling and wavelets functions;
+- Coefficient scalograms (0th, 1st, 2nd order).
 ---
 
 ### MATLAB Support Files
