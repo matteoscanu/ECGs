@@ -334,16 +334,9 @@ If you use this code, please cite my thesis work! You can also use it to dive de
 ```
 ---
 
-## Author
-
-Matteo Scanu
-Repository: [github.com/matteoscanu/ECGs](https://github.com/matteoscanu/ECGs)
----
-
-## License
-
-Project developed for research and educational purposes.
-For any doubt or curiosity, please
----
-
+## Additional notes
+**Author**: Matteo Scanu
+**Repository** [github.com/matteoscanu/ECGs](https://github.com/matteoscanu/ECGs)
+**License**: Project developed for research and educational purposes.
+**Contacts**: For any doubt or curiosity, please contact send me an e-mail at matteo.scanu99@gmail.com.
 **Last update**: 17 February 2026
