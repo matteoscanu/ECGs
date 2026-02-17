@@ -2,17 +2,6 @@
 
 This project implements a classification process for cardiac arrhythmia classification using ECG signals from the MIT-BIH database, combining it with advanced data augmentation techniques based on time-series forecasting with Wavelet Scattering Transform (WST) for robust feature extraction, followed by k-Nearest Neighbors (kNN) classification.
 
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Requirements](#requirements)
-3. [Complete Pipeline](#complete-pipeline)
-4. [Python Files - Beat Generation](#python-files---beat-generation)
-5. [MATLAB Files - Pre-processing and Classification](#matlab-files---pre-processing-and-classification)
-6. [Repository Usage](#repository-usage)
-7. [File Structure](#file-structure)
----
-
 ## Overview
 
 This project is divided into two main phases:
