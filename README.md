@@ -1,6 +1,6 @@
 # ECG Classification with Time-Series Forecasting and Wavelet Scattering Transform
 
-This project implements a complete system for cardiac arrhythmia classification using ECG signals from the MIT-BIH database. The system combines advanced data augmentation techniques based on time-series forecasting with Wavelet Scattering Transform (WST) for robust feature extraction, followed by k-Nearest Neighbors (kNN) classification.
+This project implements a classification process for cardiac arrhythmia classification using ECG signals from the MIT-BIH database, combining it with advanced data augmentation techniques based on time-series forecasting with Wavelet Scattering Transform (WST) for robust feature extraction, followed by k-Nearest Neighbors (kNN) classification.
 
 ## Table of Contents
 
@@ -15,19 +15,19 @@ This project implements a complete system for cardiac arrhythmia classification 
 
 ## Overview
 
-This project implements a complete system for ECG signal classification from the MIT-BIH Arrhythmia Database. The pipeline is divided into two main phases:
+This project is divided into two main phases:
 
 1. **Synthetic heartbeat generation** using time-series forecasting methods, developed in Python;
 2. **Pre-processing, WST transformation, and classification** of ECG signals, developed in MATLAB.
 
 The considered arrhythmia classes are:
-- **N**: Normal beats
-- **S**: Supraventricular premature beats
-- **V**: Ventricular escape beats
-- **F**: Fusion beats
+- **N**: Normal beats;
+- **S**: Atrial premature and supraventricular premature beats;
+- **V**: Premature ventricular contraction and ventricular escape beats;
+- **F**: Fusion of normal and ventricular beats.
 ---
 
-## Requirements
+## Required packages
 
 ### Python
 ```
@@ -51,27 +51,34 @@ scikit-learn
 
 ## Complete Pipeline
 
-### Phase 1: Beat Generation (Python)
-```
-gen_beats_*.py → beats_*.mat
-```
+### Phase 1: Beats Generation (Python)
+
+1. Choose a time-series forecasting method and use its respective file in folder 'forecasting' (gen_beats_*.py) to generate as many beats as needed. Remember that:
+    - ETS method is currently the one which yields the best results;
+    - LSTM and RNN needs a GPU to run.
+    - all files are also used to measure how distant new beats are from the original ones;
+    - these files have been written considering three classes of arrhythmia. If you need more you might need to change the code a bit;
+    - this procedure is only needed for beats that present some kind of cardiac disease.
+2. All files will give as output two files: one with generated beats (stored inside a .mat file) and one with all the measures (stored inside a .txt file).
+
+Note that you can skip this whole part if you just want to classify beats generated with the naive augmentation method, since it's implemented in file ```main.m```, which calls function ```naive_augmentation.m``` (but you need to uncomment some parts of the code: I noted all parts that eventually need to be commented or uncommented in a case like that).
+
 
 ### Phase 2: Classification (MATLAB)
-```
-main_script.m → Load beats_*.mat → Pre-processing → WST → Classification
-```
-
+1. Load the file you have obtained in Phase 1 (skip if you want to use only the naive augmentation method).
+2. You can comment and uncomment all the blocks of lines you need: as default the code is setup to use data generated with one of the forecasting techniques.
+3. Launch file ```main.m```: it will execute pre-processing on the data, data augmentation process, transformation of the dataset using WST and classification of the beats using kNN.
 ---
 
 ## Python Files - Beat Generation
 
-### Generation Files
+### Files overview
 
 Four Python files implement the same pipeline with **different forecasters**:
 
 #### 1. `gen_beats_ets.py` - Exponential Smoothing
 - **Forecaster**: `AutoETS` (Error-Trend-Seasonal)
-- **Configuration**: `error="add"`, `seasonal="add"`, `sp=60` (pre_window + post_window)
+- **Configuration**: `error="add"`, `seasonal="add"`
 - **Output**: `beats_ets.mat`
 - **Metrics**: Also includes metric calculations for the **naive** method
 
@@ -80,70 +87,48 @@ Four Python files implement the same pipeline with **different forecasters**:
 - **Output**: `beats_arima.mat`
 
 #### 3. `gen_beats_lstm.py` - LSTM
-- **Forecaster**: LSTM neural network
+- **Forecaster**: Long Short-Term Memory (LSTM) Neural Network
 - **Output**: `beats_lstm.mat`
 
 #### 4. `gen_beats_rnn.py` - RNN
-- **Forecaster**: Recurrent neural network (RNN)
+- **Forecaster**: Recurrent Neural Network (RNN)
 - **Output**: `beats_rnn.mat`
 
-### Common Functionality
+### Code round-up
 
 All files follow the same logic:
 
-1. **Dataset Loading**: Imports the MIT-BIH Arrhythmia Database excluding files with pacemakers
-2. **Class Mapping**: Converts original annotations to AAMI standard classes
-3. **Peak-Rest Separation**: 
-   - Isolates the R-peak (25 points before + 35 after = 60 points)
-   - Separates the rest of the beat (remaining 140 points)
-4. **Training**: The forecaster is trained on the peak portion
-5. **Prediction**: Generates new synthetic R-peaks
+1. **Dataset Loading**: Imports the MIT-BIH Arrhythmia Dataset excluding files related to patients with pacemakers;
+2. **Class Mapping**: Converts original annotations to ANSI/AAMI EC57:1998 standard classes;
+3. **Peak-Rest Separation**: Isolates the R-peak from the rest of the beat;
+4. **Training**: The forecaster is trained on a certain amount of peaks (usually nine or ten);
+5. **Prediction**: Generates new synthetic R-peaks;
 6. **Recomposition**: Combines the generated peak with the rest of the beat by adding:
-   - Gaussian noise to the rest of the beat
-   - Jump correction to ensure continuity
-7. **Metrics Calculation**: For each generated beat calculates:
-   - **DTW** (Dynamic Time Warping)
-   - **Wasserstein Distance**
-   - **Cosine Similarity**
-   - **Fréchet Distance**
-
-### Key Parameters
-
-```python
-pre = 100              # Points before R-peak
-post = 100             # Points after R-peak
-pre_window = 25        # Pre-peak window to generate
-post_window = 35       # Post-peak window to generate
-sampling_ets = 5       # Number of samples per class
-```
-
-### Generated Classes
-
-- **V**: 5 beats per iteration (25 total)
-- **F**: 10 beats per iteration (50 total)
-- **S**: 10 beats per iteration (50 total)
+   - Gaussian noise to the rest of the beat;
+   - Jump correction to ensure continuity;
+7. **Metrics Calculation**: For each generated beat the following distances with the beats used to generate it are computed:
+   - **DTW** (Dynamic Time Warping);
+   - **Wasserstein Distance**;
+   - **Cosine Similarity**;
+   - **Fréchet Distance**.
+8. Note that metrics for the naive augmentation method are calculated exclusively in the `gen_beats_ets.py` file, where a great amount of beats is generated through simple Gaussian noise addition and compared with the real ones.
+---
 
 ### Output
 
 Each file generates:
 - A `.mat` file containing a DataFrame with:
-  - `Lead_I`: Array of generated beats
-  - `Class`: Class label
-  - `Augmented`: Flag '1' (all augmented)
-- An `output_*.txt` file with average metrics
-- Comparison plots between generated and real beats (.jpg format)
-
-### Important Note: Naive Metrics
-
-**Metrics for the naive method are calculated exclusively in the `gen_beats_ets.py` file**, where a "fake" beat is generated through simple Gaussian noise addition and compared with the real beat.
-
----
+  - `Lead_I`: Array of generated beats;
+  - `Class`: Label class;
+  - `Augmented`: Flag '1' (all augmented);
+- An `output_*.txt` file with average metrics;
+- Comparison plots between generated and real beats (.jpg format).
 
 ## MATLAB Files - Pre-processing and Classification
 
-### Main File: `main_script.m`
+### Main File: `main.m`
 
-This is the central file of the MATLAB pipeline. It performs all pre-processing, transformation, and classification operations.
+This is the central file of the MATLAB pipeline. It performs pre-processing, transformation, and classification of given data.
 
 #### Script Sections
 
@@ -157,14 +142,9 @@ This is the central file of the MATLAB pipeline. It performs all pre-processing,
 ```matlab
 % Loads all 48 MIT-BIH files
 % Excludes files with pacemakers (102, 104, 107, 217)
-% Extracts beats centered on R-peak (199 + 1 points)
-% Maps classes according to AAMI standard
+% Extracts beats centered on R-peak (200 sample points each)
+% Maps classes according to ANSI/AAMI EC57:1998 standard
 ```
-
-**Key variables:**
-- `pre = 99`: Points before R-peak
-- `post = 100`: Points after R-peak
-- `sample_points = 200`: Total beat length
 
 ##### 3. Q-Class Removal
 ```matlab
@@ -174,42 +154,35 @@ This is the central file of the MATLAB pipeline. It performs all pre-processing,
 ##### 4A. Option 1 - Naive Augmentation (Commented)
 ```matlab
 % If using naive augmentation:
-% - Completely implemented in MATLAB
-% - Calls the naive_augmentation.m function
-% - Generates beats by adding Gaussian noise
+% - Completely implemented in MATLAB;
+% - Calls the naive_augmentation.m function;
+% - Generates beats by adding Gaussian noise.
 ```
 
 ##### 4B. Option 2 - Time-Series Forecasting (Default)
 ```matlab
 % Loads beats generated from Python files
-load('beats_rnn.mat')  % Change here to use ets, arima, lstm, or rnn
+load('beats_*.mat')  % Change * with ets, arima, lstm, or rnn depending on the desired forecaster.
 ```
-
-**IMPORTANT**: Modify the filename based on the forecaster used:
-- `beats_ets.mat`
-- `beats_arima.mat`
-- `beats_lstm.mat`
-- `beats_rnn.mat`
 
 ##### 5. Dataset Balancing
 ```matlab
 % Uses the balance() function to:
-% - Equalize the number of samples per class
-% - Create a balanced dataset
-% - Randomly organize beats with organize()
+% - Equalize the number of samples per class;
+% - Create a balanced dataset;
+% - Randomly organize beats with organize().
 ```
 
 ##### 6. Wavelet Scattering Transform (WST)
 ```matlab
 % WST parameters:
-invariance = 0.5       % Invariance scale
-Q = [8 1]             % Quality factors
+invariance = 0.5 % Invariance scale
+Q = [8 1]        % Quality factors
 ```
 
-**What WST does:**
-- Transforms each beat (200 points) into a matrix (paths × time_windows)
-- Reduces dimensionality by selecting the time window with maximum peak
-- Extracts robust and invariant features
+**WST OUTPUT:**
+- Transforms each beat (stored in a vector) into a matrix (paths $\times$ time_windows);
+- Dimensionality needs to be reduced: only one time window is taken, the one with maximum peak.
 
 ##### 7. Classification with KNN
 
@@ -217,14 +190,13 @@ Q = [8 1]             % Quality factors
 ```matlab
 % k-fold cross-validation (k=10)
 % KNN with k=4 neighbors
-% Distance: euclidean
-% DistanceWeight: inverse
+% Each vote is computed with euclidean distance and an inverse distance weight (the more the distance, the less the value of the vote).
 ```
 
 **3-class classification (V, S, F):**
 ```matlab
-% Same procedure but excludes 'N' class
-% Useful for evaluating performance on arrhythmias only
+% Same procedure but excludes 'N' class;
+% Useful for evaluating performance on arrhythmias only.
 ```
 
 ##### 8. Visualizations
@@ -233,7 +205,6 @@ The script automatically generates:
 - WST filterbank
 - Scaling function and wavelets
 - Coefficient scalograms (0th, 1st, 2nd order)
-
 ---
 
 ### MATLAB Support Files
@@ -242,47 +213,47 @@ The script automatically generates:
 **Function for naive data augmentation**
 
 ```matlab
-function [augmented_I, augmented_ann, augmented] = 
+function [augmented_I, augmented_ann, augmented] =
     augmentation(Lead_I, annotations, class_label, target_count, sample_points)
 ```
 
 **Input:**
-- `Lead_I`: ECG data matrix
-- `annotations`: Label vector
-- `class_label`: Class to augment
-- `target_count`: Target number of beats to generate
-- `sample_points`: Beat length
+- `Lead_I`: ECG data matrix;
+- `annotations`: Label vector;
+- `class_label`: Class to augment;
+- `target_count`: Target number of beats to generate;
+- `sample_points`: Length of each beat.
 
 **Output:**
-- `augmented_I`: New augmented ECG data
-- `augmented_ann`: New labels
-- `augmented`: Vector tracking which beats are augmented
+- `augmented_I`: New augmented ECG data;
+- `augmented_ann`: New labels;
+- `augmented`: Vector tracking which beats are augmented.
 
 **Operation:**
-1. Selects all beats of the specified class
-2. Generates `num_to_generate = target_count - current_count` new beats
+1. Selects all beats of the specified class;
+2. Generates `num_to_generate = target_count - current_count` new beats;
 3. For each new beat:
-   - Randomly selects an original beat
-   - Adds Gaussian noise: `noise ~ N(0, √0.05)`
-   - Creates augmented beat: `augmented = original + noise`
+   - Randomly selects an original beat;
+   - Adds Gaussian noise: $ w \sim N(0, \sqrt{0.05}) $
+   - Creates augmented beat: `augmented = original + noised`
 
-**Note**: This technique is completely implemented in MATLAB, unlike forecasting methods that require Python.
+Remember that this technique is completely implemented in MATLAB, unlike forecasting methods that require Python.
 
 #### `balance.m`
 **Function for class balancing**
 
 ```matlab
-function [I_balanced, ann_balanced, aug_balanced] = 
+function [I_balanced, ann_balanced, aug_balanced] =
     balance(I, annotations, augmented, class_label, target_count)
 ```
 
-**Purpose**: Samples exactly `target_count` beats for each class, randomly selecting from available beats (original + augmented).
+**Purpose**: Samples exactly `target_count` beats for each class, randomly selecting from the available ones.
 
 #### `organize.m`
 **Function for randomizing beat order**
 
 ```matlab
-function [I_org, ann_org, aug_org] = 
+function [I_org, ann_org, aug_org] =
     organize(I, annotations, augmented, seed)
 ```
 
@@ -305,9 +276,8 @@ function classificationReport(y_test, y_pred, classes)
 ```
 
 **Purpose**: Calculates and displays:
-- Overall accuracy
-- Precision, Recall, F1-score per class
-- Confusion matrix
+- Accuracy, Precision, Sensitivity and Sensibility per class;
+- Confusion matrix.
 
 ---
 
@@ -317,198 +287,74 @@ function classificationReport(y_test, y_pred, classes)
 **Utility for visualizing class distribution**
 
 ```python
-# Generates histograms to visualize 
-# class imbalance in the dataset
+# Generates an histogram to visualize
+# the final classification scores for
+# each augmentation technique. 
 ```
-
 ---
 
-## Repository Usage
-
-### Complete Workflow
-
-#### Step 1: Beat Generation with Time-Series Forecasting
-
-Choose one of the four methods and execute the corresponding file:
-
-```bash
-# Option 1: Exponential Smoothing (includes naive metrics)
-python gen_beats_ets.py
-
-# Option 2: ARIMA
-python gen_beats_arima.py
-
-# Option 3: LSTM
-python gen_beats_lstm.py
-
-# Option 4: RNN
-python gen_beats_rnn.py
-```
-
-**Produced output:**
-- `beats_[method].mat`: MATLAB file with generated beats
-- `output_[method].txt`: Evaluation metrics
-- `.jpg` files: Comparison plots
-
-**Execution time**: 5-15 minutes per method (depends on forecaster)
-
----
-
-#### Step 2: Pre-processing and Classification in MATLAB
-
-1. **Modify `main_script.m`** at the loading line:
-   ```matlab
-   load('beats_ets.mat')  % Change with the generated file
-   ```
-
-2. **Execute the script**:
-   ```matlab
-   main_script
-   ```
-
-3. **Output:**
-   - Classification report for 4 classes
-   - Classification report for 3 classes
-   - `.mat` files with transformed dataset (optional)
-   - Visualizations saved as `.jpg`
-
-**Execution time**: 10-20 minutes (includes WST transformation)
-
----
-
-### Alternative Workflow: Naive Augmentation
-
-If you prefer to use only naive augmentation (without Python):
-
-1. **Modify `main_script.m`**:
-   ```matlab
-   % COMMENT this block:
-   load('beats_rnn.mat')
-   % ...
-
-   % UNCOMMENT this block:
-   num_per_class = int(total / length(classes))
-   [I_V, annotations_V, augmented_V] = augmentation(I, annotations, 'V', num_per_class, sample_points)
-   [I_S, annotations_S, augmented_S] = augmentation(I, annotations, 'S', num_per_class, sample_points)
-   [I_F, annotations_F, augmented_F] = augmentation(I, annotations, 'F', num_per_class, sample_points)
-   ```
-
-2. **Execute the script**:
-   ```matlab
-   main_script
-   ```
-
-**Advantages**: Faster, all in MATLAB  
-**Disadvantages**: Potentially lower performance compared to forecasting methods
-
----
-
-## File Structure
+## Files Structure
 
 ```
 ECGs/
 │
-├── README.md                      # This file
+├── README.md                  # This file
+├── main.m                     # Main script
+├── naive_augmentation.m       # Naive data augmentation
+├── balance.m                  # Class balancing
+├── organize.m                 # Order randomization
+├── classCounter.m             # Class counting
+├── classificationReport.m     # Metrics report
+├── histogram.py               # Visualization utility
 │
-├── PYTHON - Beat Generation
-│   ├── gen_beats_ets.py           # Exponential Smoothing + naive metrics
-│   ├── gen_beats_arima.py         # AutoARIMA
-│   ├── gen_beats_lstm.py          # LSTM
-│   ├── gen_beats_rnn.py           # RNN
-│   └── histogram.py               # Visualization utility
-│
-├── MATLAB - Pre-processing and Classification
-│   ├── main_script.m              # Main script
-│   ├── naive_augmentation.m       # Naive data augmentation
-│   ├── balance.m                  # Class balancing
-│   ├── organize.m                 # Order randomization
-│   ├── classCounter.m             # Class counting
-│   └── classificationReport.m     # Metrics report
+├── forecasting (beats generator using time-series forecasting techniques)
+│   ├── gen_beats_ets.py       # Exponential Smoothing + naive metrics
+│   ├── gen_beats_arima.py     # AutoARIMA
+│   ├── gen_beats_lstm.py      # LSTM
+│   └── gen_beats_rnn.py       # RNN
 │
 └── OUTPUT (generated during execution)
-    ├── beats_*.mat                # Generated beats (Python → MATLAB)
-    ├── output_*.txt               # Evaluation metrics
-    ├── dataset.mat                # Processed dataset (optional)
-    ├── transformed.mat            # WST-transformed dataset (optional)
-    └── *.jpg                      # Visualizations and plots
+    ├── beats_*.mat            # Generated beats
+    ├── output_*.txt           # Evaluation metrics
+    ├── dataset.mat            # If you need to save the dataset
+    ├── transformed.mat        # WST-transformed dataset
+    └── *.jpg                  # Visualizations and plots
 ```
-
----
-
-## Key Points
-
-### Differences Between Generation Files
-- Identical structure and logic
-- Only difference: The forecaster used
-- Metrics calculated in all files (DTW, Wasserstein, Cosine, Fréchet)
-- Naive metrics: Only in `gen_beats_ets.py`
-
-### Pipeline Exceptions
-1. **Naive Augmentation**: Completely implemented in MATLAB (does not require Python)
-2. **Files with Pacemaker**: Automatically excluded (102, 104, 107, 217)
-3. **Q Class**: Removed during pre-processing
-
-### Best Practices
-- Execute Python files once, then reuse the generated `.mat` files
-- Save the WST-transformed dataset to avoid recalculations
-- Use k-fold cross-validation for robust results
-- Compare performance across different forecasters
-
----
-
-## Recommended Execution Order
-
-### First Complete Execution
-1. `python gen_beats_ets.py` → obtain `beats_ets.mat` + naive metrics
-2. Modify `main_script.m`: `load('beats_ets.mat')`
-3. `matlab -r main_script`
-4. Analyze results in `output_ets.txt` and MATLAB report
-
-### Method Comparison
-5. `python gen_beats_arima.py`
-6. Modify `main_script.m`: `load('beats_arima.mat')`
-7. `matlab -r main_script`
-8. Repeat for LSTM and RNN
-9. Compare performance
-
 ---
 
 ## Additional Notes
 
-- **Dataset**: MIT-BIH Arrhythmia Database (48 files, 360k beats)
+- **Dataset**: MIT-BIH Arrhythmia Database (48 files)
 - **Sampling Frequency**: 360 Hz
-- **Beat Length**: 200 points (≈ 0.55 seconds)
-- **Classifier**: k-Nearest Neighbors (KNN)
+- **Beat Length**: 200 points ($\approx$ 0.56 seconds)
+- **Classifier**: k-Nearest Neighbors (kNN)
 - **Cross-Validation**: 10-fold
-
----
-
-## Project Objectives
-
-1. **Intelligent Data Augmentation**: Generate realistic synthetic beats using time-series forecasting
-2. **Robust Feature Extraction**: Use Wavelet Scattering Transform for invariant features
-3. **Accurate Classification**: Distinguish between normal beats and arrhythmias (V, S, F)
-4. **Methodological Comparison**: Evaluate different forecasters and augmentation techniques
-
 ---
 
 ## References
 
-- MIT-BIH Arrhythmia Database: https://physionet.org/content/mitdb/
-- AAMI EC57 Standard: Standard arrhythmia classes
-- Wavelet Scattering Transform: Multi-scale transform for signal analysis
-
+If you use this code, please cite my thesis work!
+```
+@mastersthesis{scanu:tesi,
+    author = {Matteo Scanu},
+    title = {Synthesis of realistic human heart-beats with time-series forecasting techniques and arrhythmia classification using Wavelet Scattering Transform},
+    school = {Politecnico di Torino},
+    year = {2025}
+}
+```
+You can also use it to dive deep in the theory behind it.
 ---
 
 ## Author
 
-Matteo Scanu, Davide Carbone, Lamberto Rondoni
+Matteo Scanu
 Repository: [github.com/matteoscanu/ECGs](https://github.com/matteoscanu/ECGs)
 ---
 
 ## License
 
 Project developed for research and educational purposes.
+For any doubt or curiosity, please
 ---
 
-**Last update**: February 2026
+**Last update**: 17 February 2026
