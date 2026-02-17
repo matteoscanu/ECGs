@@ -322,7 +322,7 @@ ECGs/
 
 ## References
 
-If you use this code, please cite my thesis work!
+If you use this code, please cite my thesis work! You can also use it to dive deep in the theory behind it.
 ```
 @mastersthesis{scanu:tesi,
     author = {Matteo Scanu},
@@ -331,7 +331,6 @@ If you use this code, please cite my thesis work!
     year = {2025}
 }
 ```
-You can also use it to dive deep in the theory behind it.
 ---
 
 ## Author
